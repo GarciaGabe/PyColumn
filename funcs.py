@@ -184,31 +184,44 @@ def find_compression_vertices(vertices, x0, concrete):
 
     return clipped_path.vertices
 
-def plot_section(vertices, reinf_bars, compressed_vertices = None):
-    plt.plot(vertices[:, 0], vertices[:, 1], color='black', linewidth = 2, label='Vertices')
-    plt.fill(vertices[:, 0], vertices[:, 1], color='gray', alpha = 0.20)
+def plot_section(vertices, reinf_bars, compressed_vertices = None, bar_tensions = None):
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.plot(vertices[:, 0], vertices[:, 1], color='black', linewidth = 2, label='Vertices')
+    ax.fill(vertices[:, 0], vertices[:, 1], color='gray', alpha = 0.20)
 
     if compressed_vertices is not None:
-        plt.fill(compressed_vertices[:, 0], compressed_vertices[:, 1], label='Compressed Vertices')
-    plt.scatter(reinf_bars[:, 0], reinf_bars[:, 1], label='Reinforcing Bars')
+        ax.fill(compressed_vertices[:, 0], compressed_vertices[:, 1], label='Compressed Vertices')
+
+    # The 's' parameter controls marker size (area in points^2).
+    # Using it instead of 'linewidths' to correctly represent rebar area.
+    # A scaling factor is used for better visualization.
+    if bar_tensions is None:
+        ax.scatter(reinf_bars[:, 0], reinf_bars[:, 1], s = 50 * reinf_bars[:, 2], color='red', label='Reinforcing Bars')
+    else:
+        ax.scatter(reinf_bars[:, 0], reinf_bars[:, 1], s = 50 * reinf_bars[:, 2], cmap = bar_tensions, label='Reinforcing Bars')
+    
+
     lim = np.max(np.abs(vertices))*1.05
-    plt.xlim(-lim, lim)
-    plt.ylim(-lim, lim)
+    ax.set_xlim(-lim, lim)
+    ax.set_ylim(-lim, lim)
+    ax.set_aspect('equal', adjustable='box')
     plt.show()
 
 def calculate_polygon_properties(compressed_vertices):
     """
     Calculates the area and first moments of inertia (Mx, My) for a given polygon.
 
-    Parameters:
-    vertices (np.ndarray): A 2D NumPy array representing the polygon's vertices.
-                           Shape (N, 2), where N is the number of vertices.
+    Parameters
+    ----------
+    compressed_vertices (np.ndarray): A 2D NumPy array of shape (N, 2)
+                                      representing the polygon's vertices.
 
-    Returns:
-    tuple: A tuple containing (area, Mx, My).
+    Returns
+    -------
+    tuple
            - area (float): The area of the polygon.
-           - Sx (float): The first moment of inertia about the x-axis.
-           - Sy (float): The first moment of inertia about the the y-axis.
+           - sx (float): The first moment of area about the x-axis.
+           - sy (float): The first moment of area about the y-axis.
     """
     n = len(compressed_vertices)
     if n < 3:
@@ -234,6 +247,10 @@ def calculate_polygon_properties(compressed_vertices):
     sx = (1/6) * sx_sum
     sy = (1/6) * sy_sum
 
+    if area < 0:
+        # The shoelace formula gives a negative area for clockwise ordering.
+        # For physical consistency, we expect a counter-clockwise ordering.
+        area = abs(area)
     return area, sx, sy
 
 def calculate_axial_and_moments(compressed_vertices, reinf_bars, reinf_tensions, concrete):
@@ -246,10 +263,8 @@ def calculate_axial_and_moments(compressed_vertices, reinf_bars, reinf_tensions,
         as_sum[1] += steel_area * y * tension
         as_sum[2] += steel_area * x * tension
 
-    Nd = -area*concrete['fc'] + as_sum[0]
-    Mx = -Sx*concrete['fc'] + as_sum[1]
-    My = -Sy*concrete['fc'] + as_sum[2]
-
+    Nd = area*concrete['fc'] + as_sum[0]
+    Mx = Sx*concrete['fc'] + as_sum[1]
+    My = Sy*concrete['fc'] + as_sum[2]
 
     return Nd, Mx, My
-
