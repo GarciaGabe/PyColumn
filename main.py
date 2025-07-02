@@ -1,4 +1,5 @@
-from funcs import read_file, clear_console
+import time
+from funcs import read_file, clear_console, clear_console
 from concrete_section import concrete_section
 import numpy as np
 import matplotlib
@@ -9,35 +10,27 @@ matplotlib.use('TkAgg')
 
 clear_console()
 print('Starting...')
+start_time = time.time()
 
-fck, vertices, reinf_bars = read_file('datpil.txt')
+fck, vertices, reinf_bars = read_file('examples//fig5-4-1-JM.txt')
 section1 = concrete_section(vertices, reinf_bars, fck)
 
-section1.plot_concrete_section()
-section1.plot_verify_diagram(100)
-
-#fck, vertices, reinf_bars = read_file('fig4-6-1-JM.txt')
-#ex461JM = concrete_section(vertices, reinf_bars, fck)
-#ex461JM.plot_concrete_section()
-#ex461JM.plot_verify_diagram(1500)
-
-#fck, vertices, reinf_bars = read_file('section2.txt')
-#section2 = concrete_section(vertices, reinf_bars, fck)
-#section2.plot_concrete_section()
-
-axial = np.linspace(0, 2400, 10)
-diagrams = []
-
-for NSd in axial:
-    diagrams.append(section1.verify_section(NSd))
-
-diagrams = np.array(diagrams)
+fig1, ax1 = section1.plot_concrete_section()
+ax1.set_title("Concrete Section")
+fig2, ax2 = section1.plot_verify_diagram(1.4*800)
 
 
-colors = ['red', 'blue', 'black', 'orange', 'green', 'gray', 'purple', 'pink', 'brown', 'yellow']
+As = section1.design_section(1.4*800, 4000*1.4, 2000*1.4, iprint = True)
+section1.set_steel_area(As)
+fig3, ax3 = section1.plot_verify_diagram(1.4*800)
 
-for diagram, color in zip(diagrams, colors):
-    plt.plot(diagram[:, 2], diagram[: , 1], color = color, linewidth = 1.5, label = round(diagram[0, 0],0))
 
-plt.legend()
+
+print('\n\n--------------------------------------------------------')
+print(f'Final reinforcement area: {As:.2f} cm2')
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f"Execution time: {elapsed_time:.2f} seconds")
+
 plt.show()

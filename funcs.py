@@ -11,13 +11,13 @@ matplotlib.use('TkAgg')
 def concrete_characteristics(fck):
     ultimate_compressive_strain = (3.5 / 1000) if fck <= 50 else (2.6 / 1000 + 35 / 1000 * ((90 - fck*10)/100)**4)
     peak_compressive_strain = (2.0 / 1000) if fck <= 50 else (2.0 / 1000 + 0.085 / 1000 * (fck*10 - 50)**0.53)
-    lambda_c = 0.80 if fck <= 50 else (0.80 - (fck-50)/400)
-    alpha_c = 0.85 if fck <= 50 else (0.85 * ( 1 - ( fck - 50 ) / 200 ))
-    eta_c = 1.0 if (not CONSIDER_ETA_C or fck <= 40 ) else (fck)**(2/3)
+    lambda_c = 0.80 if fck <= 50 else (0.80 - (fck*10-50)/400)
+    alpha_c = 0.85 if fck <= 50 else (0.85 * ( 1 - ( fck*10 - 50 ) / 200 ))
+    eta_c = 1.0 if (not CONSIDER_ETA_C or fck <= 40 ) else (fck*10)**(2/3)
     
     dic = {
         'fck': fck,
-        'fc': fck / GAMMA_C * eta_c * alpha_c,
+        'fc': 0.95 * fck / GAMMA_C * eta_c * alpha_c,
         'eta_c': eta_c,
         'peak_compressive_strain': peak_compressive_strain,
         'ultimate_compressive_strain': ultimate_compressive_strain,
@@ -205,7 +205,7 @@ def plot_section(vertices, reinf_bars, compressed_vertices = None, bar_tensions 
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
     ax.set_aspect('equal', adjustable='box')
-    plt.show()
+    return fig, ax
 
 def calculate_polygon_properties(compressed_vertices):
     """
