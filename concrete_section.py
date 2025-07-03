@@ -25,6 +25,8 @@ class concrete_section:
         limits = [0 , height]
         while (func(limits[0]) * func(limits[1]) > 0):
             limits[1] *= 1000
+            if limits[1] > 10e300:
+                raise Exception('Overflow in scalar limit')
 
         x0 = (limits[0] + limits[1]) / 2
 
@@ -40,12 +42,9 @@ class concrete_section:
         
         return x0
 
-    def verify_section(self, NSd):
+    def verify_section(self, NSd, angle = None , iprint = False):
 
-        diagram = np.zeros((360, 3))
-
-        for angle in range(0, 360):
-
+        if angle is not None:
             rotated_vertices, rotated_reinf_bars = rotate_axes(self.vertices, self.reinf_bars, angle)
             y_max, y_min, height = calculate_heights(rotated_vertices)
             effective_heights = calculate_effective_heights(y_max, rotated_reinf_bars)
@@ -56,8 +55,26 @@ class concrete_section:
             compressed_vertices = find_compression_vertices(rotated_vertices, x0, self.concrete)
             compressed_vertices = rotate_axes(compressed_vertices, rotated_reinf_bars, -angle)[0]
             NRd, Mx, My = calculate_axial_and_moments(compressed_vertices, self.reinf_bars, tensions, self.concrete)
-            diagram[angle] = [NRd, Mx, My]
-        return diagram
+            if iprint: print(f'Angle: {angle}, NRd: {NRd:.2f}, Mx: {Mx:.2f}, My: {My:.2f}')
+            return [NRd, Mx, My]
+        else:
+            diagram = np.zeros((360, 3))
+
+            for angle in range(0, 360):
+
+                rotated_vertices, rotated_reinf_bars = rotate_axes(self.vertices, self.reinf_bars, angle)
+                y_max, y_min, height = calculate_heights(rotated_vertices)
+                effective_heights = calculate_effective_heights(y_max, rotated_reinf_bars)
+            
+                x0 = self.find_x0(effective_heights, rotated_reinf_bars, rotated_vertices, angle, NSd, height)
+
+                tensions = calculate_reinf_tensions(x0, effective_heights, rotated_reinf_bars, self.concrete['peak_compressive_strain'], self.concrete['ultimate_compressive_strain'], height)
+                compressed_vertices = find_compression_vertices(rotated_vertices, x0, self.concrete)
+                compressed_vertices = rotate_axes(compressed_vertices, rotated_reinf_bars, -angle)[0]
+                NRd, Mx, My = calculate_axial_and_moments(compressed_vertices, self.reinf_bars, tensions, self.concrete)
+                diagram[angle] = [NRd, Mx, My]
+                if iprint: print(f'Angle: {angle}, NRd: {NRd:.2f}, Mx: {Mx:.2f}, My: {My:.2f}')
+            return diagram
    
     def plot_concrete_section(self):
         return plot_section(self.vertices, self.reinf_bars)
@@ -114,6 +131,12 @@ class concrete_section:
     
     def design_section(self, NSd, MSxd, MSyd, iprint = False):
 
+        if (MSxd == 0 and MSyd == 0):
+            A_c = calculate_polygon_properties(self.vertices)[0]
+            As = (1.01*(NSd -  A_c * self.concrete['fc']) / steel_stress_strain_curve(self.concrete['peak_compressive_strain'], STEEL_YOUNG_MODULUS, STEEL_YIELD_STRESS))
+            return np.max([As, 0.00])
+
+
         if iprint: print('Starting Design Process...')
 
         theta_d = np.degrees( np.arctan2( MSyd,  MSxd ))
@@ -123,7 +146,21 @@ class concrete_section:
         while( (abs(theta_d - final_theta_r) > 0.001 if abs(theta_d) < 1e-6 else abs((theta_d - final_theta_r)/theta_d ) > 0.001) and iter < 11):
             iter += 1
             if iprint: print('------------------------------\n\nDesingning section, iter: {0} - Current Theta Difference = {1:.2f}%'.format(iter, abs((theta_d - final_theta_r)/theta_d )*100 if theta_d != 0 else 9999 ) )
-            diagrama = self.verify_section(NSd)
+            
+            flag = True
+            while flag:
+                try:
+                    diagrama = self.verify_section(NSd)
+                    flag = False
+                except Exception as e:
+                    print(f'Exception raised = {e}')
+                    as_atual = np.sum( self.reinf_bars[:,2] )
+                    print(f'Setting steel area to = {as_atual * 10:.2f} cm2')
+                    self.set_steel_area(as_atual * 10)
+                finally:
+                    continue
+
+            
             theta_r = np.degrees(np.arctan2(diagrama[:, 2], diagrama[:, 1]))
             
             closest_alpha = np.argmin(np.abs(theta_r - theta_d))
@@ -175,9 +212,6 @@ class concrete_section:
 
 
             if iprint: print(f'A_s0 = {A_s0:.2f} cm2')
-
-            if ( abs(MSxd) < 1 and abs(MSyd) < 1):
-                return A_s0
         
             self.set_steel_area(A_s0)
             NRd, MRxd, MRyd = self.calculate_resisting_moments(NSd, angle = alpha_0, plot = False)
@@ -227,11 +261,12 @@ class concrete_section:
 
                 As = (area_limits[0] + area_limits[1]) / 2
         
+            As *= 1.01
             self.set_steel_area(As)
             if iprint: print(f'Found As = {As:.2f} cm2')
             NRd, MRxd, MRyd = self.calculate_resisting_moments(NSd, angle = alpha_0, plot = False)
             if iprint: print(f'NRd = {NRd:.2f} kN, MRx = {MRxd/100:.2f} kN.m, MRy = {MRyd/100:.2f} kN.m')
-            final_theta_r = np.degrees( np.arctan( MRyd / MRxd ))
+            final_theta_r = np.degrees( np.arctan2( MRyd , MRxd ))
             if iprint: print(f'Final theta_r = {final_theta_r:.2f} degrees')
-        return (As * 1.00)
+        return As
         

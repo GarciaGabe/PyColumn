@@ -11,19 +11,18 @@ matplotlib.use('TkAgg')
 clear_console()
 print('Starting...')
 start_time = time.time()
+As = 0
 
-fck, vertices, reinf_bars = read_file('examples//fig5-4-1-JM.txt')
+fck, vertices, reinf_bars = read_file('examples//fig5-4-3-JM.txt')
 section1 = concrete_section(vertices, reinf_bars, fck)
 
-fig1, ax1 = section1.plot_concrete_section()
-ax1.set_title("Concrete Section")
-fig2, ax2 = section1.plot_verify_diagram(1.4*800)
+#fig1, ax1 = section1.plot_concrete_section()
+#ax1.set_title("Concrete Section")
+#fig2, ax2 = section1.plot_verify_diagram(1.4*1000)
 
+#section1.verify_section(1.4*4000, angle = 0, iprint = True)
 
-As = section1.design_section(1.4*800, 4000*1.4, 2000*1.4, iprint = True)
-section1.set_steel_area(As)
-fig3, ax3 = section1.plot_verify_diagram(1.4*800)
-
+As = section1.design_section(1.4*2000, 1.4*8000, 1.4*8000, iprint = True)
 
 
 print('\n\n--------------------------------------------------------')
