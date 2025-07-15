@@ -13,7 +13,7 @@ print('Starting...')
 start_time = time.time()
 As = 0
 
-fck, vertices, reinf_bars = read_file('examples//fig5-4-3-JM.txt')
+fck, vertices, reinf_bars = read_file('examples//fig5-4-4-JM.txt')
 section1 = concrete_section(vertices, reinf_bars, fck)
 
 #fig1, ax1 = section1.plot_concrete_section()
@@ -22,7 +22,7 @@ section1 = concrete_section(vertices, reinf_bars, fck)
 
 #section1.verify_section(1.4*4000, angle = 0, iprint = True)
 
-As = section1.design_section(1.4*2000, 1.4*8000, 1.4*8000, iprint = True)
+As = section1.design_section(1.4*2000, 1.4*16000, 1.4*16000, iprint = True)
 
 
 print('\n\n--------------------------------------------------------')

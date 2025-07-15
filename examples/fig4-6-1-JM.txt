@@ -1,0 +1,22 @@
+// EXEMPLO DA FIGURA 4.6.1 - LIVRO JOSE MILTON DE ARAUJO
+// fck
+2.0
+// Vertices da secao:
+// Numerar sempre no sentido anti-horario
+7
+0   0
+50  0
+50  15
+15  15
+15  50
+0   50
+0   0
+// Barras de aco:
+7
+4   4   2.01
+11  4   2.01
+46  4   2.01
+46  11  2.01
+4   11  2.01
+4   46  2.01
+11  46  2.01
