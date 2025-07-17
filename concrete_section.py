@@ -5,7 +5,7 @@ import scipy.optimize as opt
 matplotlib.use('TkAgg')
 
 
-class concrete_section:
+class ConcreteSection:
 
     def __init__(self, vertices, reinf_bars, fck ):
         

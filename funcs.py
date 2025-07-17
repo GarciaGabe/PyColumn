@@ -7,7 +7,6 @@ from matplotlib.transforms import Bbox
 from consts import *
 matplotlib.use('TkAgg')
 
-
 def concrete_characteristics(fck):
     ultimate_compressive_strain = (3.5 / 1000) if fck <= 50 else (2.6 / 1000 + 35 / 1000 * ((90 - fck*10)/100)**4)
     peak_compressive_strain = (2.0 / 1000) if fck <= 50 else (2.0 / 1000 + 0.085 / 1000 * (fck*10 - 50)**0.53)
