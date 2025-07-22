@@ -7,12 +7,12 @@ from matplotlib.transforms import Bbox
 from consts import *
 matplotlib.use('TkAgg')
 
-def concrete_characteristics(fck):
-    ultimate_compressive_strain = (3.5 / 1000) if fck <= 50 else (2.6 / 1000 + 35 / 1000 * ((90 - fck*10)/100)**4)
-    peak_compressive_strain = (2.0 / 1000) if fck <= 50 else (2.0 / 1000 + 0.085 / 1000 * (fck*10 - 50)**0.53)
-    lambda_c = 0.80 if fck <= 50 else (0.80 - (fck*10-50)/400)
-    alpha_c = 0.85 if fck <= 50 else (0.85 * ( 1 - ( fck*10 - 50 ) / 200 ))
-    eta_c = 1.0 if (not CONSIDER_ETA_C or fck <= 40 ) else (fck*10)**(2/3)
+def concrete_characteristics(fck, consider_eta_c = CONSIDER_ETA_C):
+    ultimate_compressive_strain = (3.5 / 1000) if fck <= 5 else (2.6 / 1000 + 35 / 1000 * ((90 - fck*10)/100)**4)
+    peak_compressive_strain = (2.0 / 1000) if fck <= 5 else (2.0 / 1000 + 0.085 / 1000 * (fck*10 - 50)**0.53)
+    lambda_c = 0.80 if fck <= 5 else np.round(0.80 - (fck*10-50)/400 , 3)
+    alpha_c = 0.85 if fck <= 5 else np.round(0.85 * ( 1 - ( fck*10 - 50 ) / 200 ) , 3)
+    eta_c = 1.0 if (not consider_eta_c or fck <= 4 ) else (4/fck)**(2/3)
     
     dic = {
         'fck': fck,

@@ -7,10 +7,10 @@ matplotlib.use('TkAgg')
 
 class ConcreteSection:
 
-    def __init__(self, vertices, reinf_bars, fck ):
+    def __init__(self, vertices, reinf_bars, fck, consider_eta_c = CONSIDER_ETA_C ):
         
         self.vertices, self.reinf_bars = translate_to_geometric_center(vertices, reinf_bars)
-        self.concrete = concrete_characteristics(fck)
+        self.concrete = concrete_characteristics(fck, consider_eta_c)
 
     def find_x0(self, effective_heights, rotated_reinf_bars, rotated_vertices, angle, NSd, height):
 
@@ -143,7 +143,7 @@ class ConcreteSection:
         final_theta_r = 1000    
         iter = 0
         
-        while( (abs(theta_d - final_theta_r) > 0.001 if abs(theta_d) < 1e-6 else abs((theta_d - final_theta_r)/theta_d ) > 0.001) and iter < 11):
+        while( (abs(theta_d - final_theta_r) > 0.001 if abs(theta_d) < 1e-6 else abs((theta_d - final_theta_r)/theta_d ) > 0.01) and iter < 11):
             iter += 1
             if iprint: print('------------------------------\n\nDesingning section, iter: {0} - Current Theta Difference = {1:.2f}%'.format(iter, abs((theta_d - final_theta_r)/theta_d )*100 if theta_d != 0 else 9999 ) )
             

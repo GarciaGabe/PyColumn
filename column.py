@@ -12,6 +12,8 @@ def alpha_b(M1, M2):
     :param M2: Moment at the other end of the column.
     :return: Calculated alpha_b value.
     """
+    if M1 == 0 and M2 == 0:
+        return 0.40
     aux1 = np.sign( M1 * M2 )
     aux2 = np.min(np.abs( [M1 , M2] )) / np.max(np.abs( [M1 , M2] ))
     alpha_b = 0.60 + 0.40 * aux1 * aux2
@@ -19,7 +21,7 @@ def alpha_b(M1, M2):
 
 class RectangularColumn:
 
-    def __init__(self, width, height, fck, l_e ,cover = 2.5, stirrups = 0.63):
+    def __init__(self, width, height, fck, l_e ,cover = 2.5, stirrups = 0.63, consider_eta_c = True):
         """
         width: Lenght of the column in direction X [cm].
         height: Lenght of the column in direction Y [cm].
@@ -30,6 +32,8 @@ class RectangularColumn:
         self.l_e = l_e
         self.cover = cover
         self.stirrups = stirrups
+        self.consider_eta_c = consider_eta_c
+
     
     def set_forces(self, N, Mx, My):
         self.N = {'bottom': N[0], 'top': N[1]}
@@ -65,15 +69,16 @@ class RectangularColumn:
             print(f"lambda_x: {lambda_x:.1f}, lambda_y: {lambda_y:.1f}")
             print(f"lambda_1_x: {lambda_1_x:.1f}, lambda_1_y: {lambda_1_y:.1f}")
             print(f"alpha_b_x: {alpha_b_x:.2f}, alpha_b_y: {alpha_b_y:.2f}\n")
-
+            self.N['mid'] = float(self.N['top'] + self.N['bottom'])/2
+            
             if lambda_x <= lambda_1_x:
                 self.Mx['mid'] = (self.Mx['top'] + self.Mx['bottom']) / 2
             else:
-                if lambda_x > 90:
+                if lambda_x > 91:
                     raise ValueError("Column is slender in X direction, second-order effects cannot be calculated by k_approx method.")
                 else:
-                    Nd = np.max( [self.N['top'], self.N['bottom']] ) * GAMMA_F
-                    MSd = np.max( np.abs( [self.Mx['top'], self.Mx['bottom']] ) ) * GAMMA_F
+                    Nd = np.max( [self.N['top'], self.N['bottom']] ) * 1.0
+                    MSd = np.max( np.abs( [self.Mx['top'], self.Mx['bottom']] ) ) * 1.0
                     print(f"Nd: {Nd:.2f} kN, MSd: {MSd:.2f} kNcm")
                     
                     a = 5 * self.height
@@ -82,17 +87,16 @@ class RectangularColumn:
 
                     MSd_tot = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
                     self.Mx['mid'] = float(MSd_tot)
-                    self.N['mid'] = float(self.N['top'] + self.N['bottom'])/2
             print(f"Calculated Mx at midspan: {self.Mx['mid']:.2f} kNcm")
 
             if lambda_y <= lambda_1_y:
                 self.My['mid'] = (self.My['top'] + self.My['bottom']) / 2
             else:
-                if lambda_y > 90:
+                if lambda_y > 91:
                     raise ValueError("Column is slender in Y direction, second-order effects cannot be calculated by k_approx method.")
                 else:
-                    Nd = np.max( [self.N['top'], self.N['bottom']] ) * GAMMA_F
-                    MSd = np.max( np.abs( [self.My['top'], self.My['bottom']] ) ) * GAMMA_F
+                    Nd = np.max( [self.N['top'], self.N['bottom']] ) * 1.0
+                    MSd = np.max( np.abs( [self.My['top'], self.My['bottom']] ) ) * 1.0
                     print(f"Nd: {Nd:.2f} kN, MSd: {MSd:.2f} kNcm")
                     
                     a = 5 * self.width
@@ -101,7 +105,6 @@ class RectangularColumn:
 
                     MSd_tot = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
                     self.My['mid'] = float(MSd_tot)
-                    self.N['mid'] = float(self.N['top'] + self.N['bottom'])/2
             print(f"Calculated My at midspan: {self.My['mid']:.2f} kNcm")
 
         #implementar momento mínimo
@@ -117,10 +120,10 @@ class RectangularColumn:
         else: # method == 'exact'
             pass
 
-    def designColumn(self):
+    def designColumn(self, only_mid = False):
         print("\n\n|--------------------------------------------------------|")
         print("Designing column...\n")
-        print(f"Width: {self.width} cm, Height: {self.height} cm, fck: {self.fck} MPa, l_e: {self.l_e} cm")
+        print(f"Width: {self.width} cm, Height: {self.height} cm, fck: {self.fck*10} MPa, l_e: {self.l_e} cm")
         print(f"Cover: {self.cover} cm, Stirrups: {self.stirrups} cm\n")
         print(f"Axial Load N: {self.N}")
         print(f"Moments Mx: {self.Mx}")
@@ -152,17 +155,20 @@ class RectangularColumn:
         reinf_bars = np.array(reinf_bars)
 
         print(f"Number of bars per face: {n_bars}\n\n")
-        section1 = ConcreteSection(vertices, reinf_bars, self.fck)
+        section1 = ConcreteSection(vertices, reinf_bars, self.fck, consider_eta_c = self.consider_eta_c)
 
-        print("Designing reinforcement for top section...")
-        As_top = section1.design_section(self.N['top'], self.Mx['top'], self.My['top'], iprint=False)
+        As_top = 0
+        As_bottom = 0
+        if not only_mid:
+            print("Designing reinforcement for top section...")
+            As_top = section1.design_section(self.N['top'], self.Mx['top'], self.My['top'], iprint=False)
+            print(f'Final reinforcement area at top: {As_top:.2f} cm2')
+            print("Designing reinforcement for bot section...")
+            As_bottom = section1.design_section(self.N['bottom'], self.Mx['bottom'], self.My['bottom'], iprint=False)
+            print(f'Final reinforcement area at bottom: {As_bottom:.2f} cm2')
         print("Designing reinforcement for mid section...")
-        As_mid = section1.design_section(self.N['top'], self.Mx['mid'], self.My['mid'], iprint=False)
-        print("Designing reinforcement for bot section...")
-        As_bottom = section1.design_section(self.N['bottom'], self.Mx['bottom'], self.My['bottom'], iprint=False)
-
-        print('\n\n--------------------------------------------------------')
-        print(f'Final reinforcement area at top: {As_top:.2f} cm2')
+        As_mid = section1.design_section(self.N['mid'], self.Mx['mid'], self.My['mid'], iprint=True)
         print(f'Final reinforcement area at mid: {As_mid:.2f} cm2')
-        print(f'Final reinforcement area at bottom: {As_bottom:.2f} cm2')
+        print('\n\n--------------------------------------------------------')
+
         return np.max([As_top, As_mid, As_bottom])
