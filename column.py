@@ -55,6 +55,8 @@ class RectangularColumn:
         lambda_x = self.l_e / ( np.sqrt(i_x / area) )
         lambda_y = self.l_e / ( np.sqrt(i_y / area) )
 
+        if self.N['top'] <= 0 or self.N['bottom'] <= 0:
+            self.N['top'] = self.N['bottom'] = 0.01  # Avoid division by zero
         e1_x = self.Mx['top'] / (self.N['top'] )
         e1_y = self.My['top'] / (self.N['top'] )
 
@@ -78,7 +80,7 @@ class RectangularColumn:
                     raise ValueError("Column is slender in X direction, second-order effects cannot be calculated by k_approx method.")
                 else:
                     Nd = np.max( [self.N['top'], self.N['bottom']] ) * 1.0
-                    MSd = np.max( np.abs( [self.Mx['top'], self.Mx['bottom']] ) ) * 1.0
+                    MSd = (self.Mx['top'] + self.Mx['bottom']) / 2 * 1.0
                     print(f"Nd: {Nd:.2f} kN, MSd: {MSd:.2f} kNcm")
                     
                     a = 5 * self.height
@@ -86,7 +88,7 @@ class RectangularColumn:
                     c = - Nd * self.height ** 2 * alpha_b_x * MSd
 
                     MSd_tot = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
-                    self.Mx['mid'] = float(MSd_tot)
+                    self.Mx['mid'] = np.max([ float(MSd_tot), MSd ])
             print(f"Calculated Mx at midspan: {self.Mx['mid']:.2f} kNcm")
 
             if lambda_y <= lambda_1_y:
@@ -96,7 +98,7 @@ class RectangularColumn:
                     raise ValueError("Column is slender in Y direction, second-order effects cannot be calculated by k_approx method.")
                 else:
                     Nd = np.max( [self.N['top'], self.N['bottom']] ) * 1.0
-                    MSd = np.max( np.abs( [self.My['top'], self.My['bottom']] ) ) * 1.0
+                    MSd = (self.My['top'] + self.My['bottom']) / 2 * 1.0
                     print(f"Nd: {Nd:.2f} kN, MSd: {MSd:.2f} kNcm")
                     
                     a = 5 * self.width
@@ -104,7 +106,8 @@ class RectangularColumn:
                     c = - Nd * self.width ** 2 * alpha_b_y * MSd
 
                     MSd_tot = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
-                    self.My['mid'] = float(MSd_tot)
+                    
+                    self.My['mid'] = np.max([ float(MSd_tot), MSd ])
             print(f"Calculated My at midspan: {self.My['mid']:.2f} kNcm")
 
         #implementar momento mínimo
